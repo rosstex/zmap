@@ -20,6 +20,7 @@
 #include "packet.h"
 
 // extern probe_module_t module_tcp_cisco_backdoor;
+// INCLUDED IPv4 PROBES
 extern probe_module_t module_tcp_synscan;
 extern probe_module_t module_tcp_synackscan;
 extern probe_module_t module_icmp_echo;
@@ -30,11 +31,20 @@ extern probe_module_t module_upnp;
 extern probe_module_t module_dns;
 extern probe_module_t module_bacnet;
 extern probe_module_t module_tcp_synopt;
+// CUSTOM IPv4 PROBES
+extern probe_module_t module_icmp_timestamp;
+extern probe_module_t module_icmp_reply;
+extern probe_module_t module_nmap_tcp;
+extern probe_module_t module_nmap_udp;
+extern probe_module_t module_nmap_icmp_echo_1;
+extern probe_module_t module_nmap_icmp_echo_2;
+// INCLUDED IPv6 PROBES
 extern probe_module_t module_ipv6_tcp_synscan;
 extern probe_module_t module_ipv6_tcp_synopt;
 extern probe_module_t module_ipv6_udp;
 extern probe_module_t module_ipv6_udp_dns;
 extern probe_module_t module_icmp6_echoscan;
+// CUSTOM IPv6 PROBES
 extern probe_module_t module_icmp6_nmap_echo_1;
 extern probe_module_t module_icmp6_nmap_echo_2;
 extern probe_module_t module_icmp6_nmap_node_req;
@@ -60,6 +70,11 @@ probe_module_t* probe_modules[] = {
 	&module_ipv6_udp,
 	&module_ipv6_udp_dns,
 	&module_icmp6_echoscan,
+
+    &module_nmap_tcp, &module_nmap_udp, &module_nmap_icmp_echo_1,
+    &module_nmap_icmp_echo_2,
+    &module_icmp_timestamp, &module_icmp_reply,
+	
 	&module_icmp6_nmap_echo_1,
 	&module_icmp6_nmap_echo_2,
 	&module_icmp6_nmap_node_req,

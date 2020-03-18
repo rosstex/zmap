@@ -6,8 +6,6 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// probe module for performing ICMP echo request (ping) scans
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -24,9 +22,9 @@
 #define ICMP_SMALLEST_SIZE 5
 #define ICMP_TIMXCEED_UNREACH_HEADER_SIZE 8
 
-probe_module_t module_icmp_echo;
+probe_module_t module_nmap_icmp_echo_1;
 
-static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
+static int nmap_icmp_echo_1_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 				    __attribute__((unused)) port_h_t dst_port,
 				    __attribute__((unused)) void **arg_ptr)
 {
@@ -36,16 +34,19 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	make_eth_header(eth_header, src, gw);
 
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct icmp) - 8);
+    uint16_t len = htons(20 + 8 + 120);
 	make_ip_header(ip_header, IPPROTO_ICMP, len);
 
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 	make_icmp_header(icmp_header);
 
+    char *payload = (char *)(&icmp_header[1]);
+    memset(payload, 0x00, 120);
+
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
+static int nmap_icmp_echo_1_make_packet(void *buf, UNUSED size_t *buf_len,
 				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
@@ -54,7 +55,8 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 
-	uint16_t icmp_idnum = validation[1] & 0xFFFF;
+
+    uint16_t icmp_idnum = validation[1] & 0xFFFF;
 	uint16_t icmp_seqnum = validation[2] & 0xFFFF;
 
 	ip_header->ip_src.s_addr = src_ip;
@@ -63,6 +65,11 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 
 	icmp_header->icmp_id = icmp_idnum;
 	icmp_header->icmp_seq = icmp_seqnum;
+
+    // NMAP icmp probe 1 options
+    ip_header->ip_off = htons(IP_DF);
+    ip_header->ip_tos = 0;
+    icmp_header->icmp_code = 9;
 
 	icmp_header->icmp_cksum = 0;
 	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header);
@@ -73,7 +80,7 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	return EXIT_SUCCESS;
 }
 
-static void icmp_echo_print_packet(FILE *fp, void *packet)
+static void nmap_icmp_echo_1_print_packet(FILE *fp, void *packet)
 {
 	struct ether_header *ethh = (struct ether_header *)packet;
 	struct ip *iph = (struct ip *)&ethh[1];
@@ -130,7 +137,7 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 			     (uint8_t *)validation);
 	}
 
-	// validate icmp id and seqnum
+
 	if (icmp_idnum != (validation[1] & 0xFFFF)) {
 		return 0;
 	}
@@ -140,7 +147,7 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static void icmp_echo_process_packet(const u_char *packet,
+static void nmap_icmp_echo_1_process_packet(const u_char *packet,
 				     __attribute__((unused)) uint32_t len,
 				     fieldset_t *fs,
 				     __attribute__((unused))
@@ -166,16 +173,16 @@ static fielddef_t fields[] = {
      .type = "bool",
      .desc = "did probe module classify response as success"}};
 
-probe_module_t module_icmp_echo = {.name = "icmp_echoscan",
-				   .packet_length = 62,
+probe_module_t module_nmap_icmp_echo_1 = {.name = "nmap_icmp_echo_1",
+				   .packet_length = 170,
 				   .pcap_filter = "icmp and icmp[0]!=8",
-				   .pcap_snaplen = 96,
+				   .pcap_snaplen = 300,
 				   .port_args = 1,
 				   .thread_initialize =
-				       &icmp_echo_init_perthread,
-				   .make_packet = &icmp_echo_make_packet,
-				   .print_packet = &icmp_echo_print_packet,
-				   .process_packet = &icmp_echo_process_packet,
+				       &nmap_icmp_echo_1_init_perthread,
+				   .make_packet = &nmap_icmp_echo_1_make_packet,
+				   .print_packet = &nmap_icmp_echo_1_print_packet,
+				   .process_packet = &nmap_icmp_echo_1_process_packet,
 				   .validate_packet = &icmp_validate_packet,
 				   .close = NULL,
 				   .output_type = OUTPUT_TYPE_STATIC,

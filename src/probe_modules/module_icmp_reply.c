@@ -6,7 +6,7 @@
  * of the License at http://www.apache.org/licenses/LICENSE-2.0
  */
 
-// probe module for performing ICMP echo request (ping) scans
+// probe module for performing ICMP reply request (ping) scans
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -24,9 +24,9 @@
 #define ICMP_SMALLEST_SIZE 5
 #define ICMP_TIMXCEED_UNREACH_HEADER_SIZE 8
 
-probe_module_t module_icmp_echo;
+probe_module_t module_icmp_reply;
 
-static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
+static int icmp_reply_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 				    __attribute__((unused)) port_h_t dst_port,
 				    __attribute__((unused)) void **arg_ptr)
 {
@@ -45,7 +45,12 @@ static int icmp_echo_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 	return EXIT_SUCCESS;
 }
 
-static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
+struct payload
+{
+    uint32_t load;
+};
+
+static int icmp_reply_make_packet(void *buf, UNUSED size_t *buf_len,
 				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
@@ -53,6 +58,7 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
+    struct payload *pload = (struct payload *) (&icmp_header[1]);
 
 	uint16_t icmp_idnum = validation[1] & 0xFFFF;
 	uint16_t icmp_seqnum = validation[2] & 0xFFFF;
@@ -60,9 +66,13 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
+    ip_header->ip_len = htons(32);
 
-	icmp_header->icmp_id = icmp_idnum;
-	icmp_header->icmp_seq = icmp_seqnum;
+    icmp_header->icmp_type = 0;
+    icmp_header->icmp_code = 0;
+	icmp_header->icmp_id = 1234;
+	icmp_header->icmp_seq = 9876;
+    pload->load = htonl(3345);
 
 	icmp_header->icmp_cksum = 0;
 	icmp_header->icmp_cksum = icmp_checksum((unsigned short *)icmp_header);
@@ -73,7 +83,7 @@ static int icmp_echo_make_packet(void *buf, UNUSED size_t *buf_len,
 	return EXIT_SUCCESS;
 }
 
-static void icmp_echo_print_packet(FILE *fp, void *packet)
+static void icmp_reply_print_packet(FILE *fp, void *packet)
 {
 	struct ether_header *ethh = (struct ether_header *)packet;
 	struct ip *iph = (struct ip *)&ethh[1];
@@ -129,7 +139,6 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
 			     (uint8_t *)validation);
 	}
-
 	// validate icmp id and seqnum
 	if (icmp_idnum != (validation[1] & 0xFFFF)) {
 		return 0;
@@ -140,21 +149,48 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	return 1;
 }
 
-static void icmp_echo_process_packet(const u_char *packet,
+static void icmp_reply_process_packet(const u_char *packet,
 				     __attribute__((unused)) uint32_t len,
 				     fieldset_t *fs,
 				     __attribute__((unused))
 				     uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-    uint32_t packet_size = htons(ip_hdr->ip_len) + sizeof(struct ether_header); // add ethernet bytes
-
-    fs_add_binary(fs, "bitstring", packet_size, (void *) packet, 0);
-    fs_add_bool(fs, "success", 1);
+	struct icmp *icmp_hdr =
+	    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+	fs_add_uint64(fs, "type", icmp_hdr->icmp_type);
+	fs_add_uint64(fs, "code", icmp_hdr->icmp_code);
+	fs_add_uint64(fs, "icmp_id", ntohs(icmp_hdr->icmp_id));
+	fs_add_uint64(fs, "seq", ntohs(icmp_hdr->icmp_seq));
+	switch (icmp_hdr->icmp_type) {
+	case ICMP_ECHOREPLY:
+		fs_add_string(fs, "classification", (char *)"replyreply", 0);
+		fs_add_uint64(fs, "success", 1);
+		break;
+	case ICMP_UNREACH:
+		fs_add_string(fs, "classification", (char *)"unreach", 0);
+		fs_add_bool(fs, "success", 0);
+		break;
+	case ICMP_SOURCEQUENCH:
+		fs_add_string(fs, "classification", (char *)"sourcequench", 0);
+		fs_add_bool(fs, "success", 0);
+		break;
+	case ICMP_REDIRECT:
+		fs_add_string(fs, "classification", (char *)"redirect", 0);
+		fs_add_bool(fs, "success", 0);
+		break;
+	case ICMP_TIMXCEED:
+		fs_add_string(fs, "classification", (char *)"timxceed", 0);
+		fs_add_bool(fs, "success", 0);
+		break;
+	default:
+		fs_add_string(fs, "classification", (char *)"other", 0);
+		fs_add_bool(fs, "success", 0);
+		break;
+	}
 }
 
 static fielddef_t fields[] = {
-    {.name = "bitstring", .type = "binary", .desc = "bitstring of packet"},
     {.name = "type", .type = "int", .desc = "icmp message type"},
     {.name = "code", .type = "int", .desc = "icmp message sub type code"},
     {.name = "icmp-id", .type = "int", .desc = "icmp id number"},
@@ -166,16 +202,16 @@ static fielddef_t fields[] = {
      .type = "bool",
      .desc = "did probe module classify response as success"}};
 
-probe_module_t module_icmp_echo = {.name = "icmp_echoscan",
-				   .packet_length = 62,
-				   .pcap_filter = "icmp and icmp[0]!=8",
+probe_module_t module_icmp_reply = {.name = "icmp_replyscan",
+				   .packet_length = 46,
+				   .pcap_filter = "icmp",
 				   .pcap_snaplen = 96,
-				   .port_args = 1,
+				   .port_args = 0,
 				   .thread_initialize =
-				       &icmp_echo_init_perthread,
-				   .make_packet = &icmp_echo_make_packet,
-				   .print_packet = &icmp_echo_print_packet,
-				   .process_packet = &icmp_echo_process_packet,
+				       &icmp_reply_init_perthread,
+				   .make_packet = &icmp_reply_make_packet,
+				   .print_packet = &icmp_reply_print_packet,
+				   .process_packet = &icmp_reply_process_packet,
 				   .validate_packet = &icmp_validate_packet,
 				   .close = NULL,
 				   .output_type = OUTPUT_TYPE_STATIC,
