@@ -35,6 +35,11 @@ extern probe_module_t module_ipv6_tcp_synopt;
 extern probe_module_t module_ipv6_udp;
 extern probe_module_t module_ipv6_udp_dns;
 extern probe_module_t module_icmp6_echoscan;
+extern probe_module_t module_icmp6_nmap_echo_1;
+extern probe_module_t module_icmp6_nmap_echo_2;
+extern probe_module_t module_icmp6_nmap_node_req;
+extern probe_module_t module_ipv6_nmap_tcp;
+extern probe_module_t module_ipv6_nmap_udp;
 
 // ADD YOUR MODULE HERE
 
@@ -54,7 +59,12 @@ probe_module_t* probe_modules[] = {
 	&module_ipv6_tcp_synopt,
 	&module_ipv6_udp,
 	&module_ipv6_udp_dns,
-	&module_icmp6_echoscan
+	&module_icmp6_echoscan,
+	&module_icmp6_nmap_echo_1,
+	&module_icmp6_nmap_echo_2,
+	&module_icmp6_nmap_node_req,
+	&module_ipv6_nmap_tcp,
+	&module_ipv6_nmap_udp
 	// ADD YOUR MODULE HERE
 };
 

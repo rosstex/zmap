@@ -119,6 +119,8 @@ int ipv6_udp_global_initialize(struct state_conf *conf) {
 
 	FILE *inp;
 
+	log_info("udp", "ASFDSAFDASFADS HI");
+
 	num_ports = conf->source_port_last - conf->source_port_first + 1;
 	udp_set_num_ports(num_ports);
 

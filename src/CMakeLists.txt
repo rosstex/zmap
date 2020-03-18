@@ -44,6 +44,11 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_ipv6_udp.c
     probe_modules/module_ipv6_udp_dns.c
     probe_modules/module_icmp6_echoscan.c
+    probe_modules/module_icmp6_nmap_echo_1.c
+    probe_modules/module_icmp6_nmap_echo_2.c
+    probe_modules/module_icmp6_nmap_node_req.c
+    probe_modules/module_ipv6_nmap_tcp.c
+    probe_modules/module_ipv6_nmap_udp.c
 )
 
 set(SOURCES
