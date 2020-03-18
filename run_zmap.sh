@@ -1,4 +1,9 @@
 #!/bin/bash
 ./compile.sh
 wait
-sudo zmap -p 20023 -M $1 --ipv6-target-file=ipv6.txt --ipv6-source-ip=fe80::1e69:7aff:fe60:7aa5 --probe-args=$2
+
+case $1 in
+  4) sudo zmap -p 20023 -M $2 --whitelist-file=ipv4.txt --source-ip=1.1.1.1 --probe-args=$3;;
+  6) sudo zmap -p 20023 -M $2 --ipv6-target-file=ipv6.txt --source-ip=1.1.1.1 --ipv6-source-ip=fe80::1e69:7aff:fe60:7aa5 --probe-args=$3;;
+  *) echo "Please begin your command with '4' or '6'" && exit;
+esac
