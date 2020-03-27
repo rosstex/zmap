@@ -75,7 +75,7 @@ int ipv6_nmap_udp_make_packet(void *buf, UNUSED size_t *buf_len, __attribute__((
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
 	// ip_header->ip_id = htons(0x1042); doesn't exist in IPv6
 	ip6_header->ip6_ctlun.ip6_un1.ip6_un1_hlim = ttl;
-	udp_header->uh_sport = htons(43213);
+	udp_header->uh_sport = htons(get_src_port(num_ports, probe_num, validation));
 
 	udp_header->uh_sum = ipv6_udp_checksum(&ip6_header->ip6_src, &ip6_header->ip6_dst, udp_header);
 

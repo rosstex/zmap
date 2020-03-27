@@ -99,7 +99,7 @@ int ipv6_nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n
 
 	tcp_header->th_sport = htons(get_src_port(num_ports,
 				probe_num, validation));
-	tcp_header->th_seq = 100;
+	tcp_header->th_seq = htonl(tcp_seq);
 	tcp_header->th_off = 10;
 
 	if(strcmp(packet_type, "t5") == 0)
@@ -170,7 +170,7 @@ int ipv6_nmap_tcp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		return 0;
 	}
 	// validate tcp acknowledgement number
-	if (htonl(tcp_hdr->th_ack) != htonl(validation[0])+1) {
+	if (ntohl(tcp_hdr->th_ack) != validation[0]+1) {
 		return 0;
 	}
 	return 1;

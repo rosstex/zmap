@@ -149,7 +149,10 @@ static int nmap_tcp_validate_packet(const struct ip *ip_hdr, UNUSED uint32_t len
 	if (ip_hdr->ip_p != IPPROTO_TCP) {
 		return 0;
 	}
-
+    if ((4 * ip_hdr->ip_hl + sizeof(struct tcphdr)) > len) {
+		// buffer not large enough to contain expected tcp header
+		return 0;
+	}
 	struct tcphdr *tcp =
 	    (struct tcphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 	uint16_t sport = tcp->th_sport;

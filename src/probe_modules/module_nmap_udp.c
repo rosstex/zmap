@@ -80,7 +80,7 @@ static int nmap_udp_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_dst.s_addr = dst_ip;
     ip_header->ip_id = htons(0x1042);
 	ip_header->ip_ttl = ttl;
-    udp_header->uh_sport = htons(43213);
+	udp_header->uh_sport = htons(get_src_port(num_ports, probe_num, validation));
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);
@@ -104,51 +104,9 @@ static int nmap_udp_validate_packet(const struct ip *ip_hdr, UNUSED uint32_t len
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
-		if (!blacklist_is_allowed(*src_ip)) {
-			return PACKET_INVALID;
-		}
-	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
-		// UDP can return ICMP Destination unreach
-		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
-		const uint32_t min_len =
-		    4 * ip_hdr->ip_hl + ICMP_UNREACH_HEADER_SIZE +
-		    sizeof(struct ip) + sizeof(struct udphdr);
-		if (len < min_len) {
-			// Not enough information for us to validate
-			return PACKET_INVALID;
-		}
-		struct icmp *icmp =
-		    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		if (icmp->icmp_type != ICMP_UNREACH) {
-			return PACKET_INVALID;
-		}
-		struct ip *ip_inner =
-		    (struct ip *)((char *)icmp + ICMP_UNREACH_HEADER_SIZE);
-		// Now we know the actual inner ip length, we should recheck the
-		// buffer
-		if (len < 4 * ip_inner->ip_hl - sizeof(struct ip) + min_len) {
-			return PACKET_INVALID;
-		}
-		// find original destination IP and check that we sent a packet
-		// to that IP address
-		uint32_t dest = ip_inner->ip_dst.s_addr;
-		if (!blacklist_is_allowed(dest)) {
-			return PACKET_INVALID;
-		}
-		// This is the UDP packet we sent
-		struct udphdr *udp =
-		    (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
-		// we can always check the destination port because this is the
-		// original packet and wouldn't have been altered by something
-		// responding on a different port
-		uint16_t dport = ntohs(udp->uh_dport);
-		uint16_t sport = ntohs(udp->uh_sport);
-		if (dport != zconf.target_port) {
-			return PACKET_INVALID;
-		}
-		if (!check_dst_port(sport, num_ports, validation)) {
-			return PACKET_INVALID;
-		}
+		// if (!blacklist_is_allowed(*src_ip)) {
+		// 	return PACKET_INVALID;
+		// }
 	} else {
 		return PACKET_INVALID;
 	}
