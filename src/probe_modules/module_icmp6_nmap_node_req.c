@@ -71,8 +71,8 @@ static int icmp6_nmap_node_req_make_packet(void *buf, UNUSED size_t *buf_len, UN
 	uint16_t icmp_idnum = validation[2] & 0xFFFF;
 
 	// // Include validation in ICMPv6 payload data
-	icmp6_header->icmp6_data32[7] = validation[0];
-	icmp6_header->icmp6_data32[8] = validation[1];
+	icmp6_header->icmp6_data32[1] = validation[0];
+	icmp6_header->icmp6_data32[2] = validation[1];
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
@@ -143,7 +143,7 @@ static int icmp6_nmap_node_req_validate_packet(const struct ip *ip_hdr,
 	}
 
 	// Validate ICMPv6 data
-	if (icmp6_h->icmp6_data32[7] != validation[0] || icmp6_h->icmp6_data32[8] != validation[1]) {
+	if (icmp6_h->icmp6_data32[1] != validation[0] || icmp6_h->icmp6_data32[2] != validation[1]) {
 		return 0;
 	}
 
@@ -174,7 +174,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_icmp6_nmap_node_req = {
 	.name = "icmp6_nmap_node_req",
-	.packet_length = 94, // 14 ethernet header + 40 IPv6 header + 8 ICMPv6 header + 8 nonce + 16 IP + 8 validation
+	.packet_length = 86, // 14 ethernet header + 40 IPv6 header + 8 ICMPv6 header + 8 nonce + 16 IP + 8 validation
 	.pcap_filter = "icmp6", // and icmp6[0]=!8",
 	.pcap_snaplen =  500,
 	.port_args = 1,
