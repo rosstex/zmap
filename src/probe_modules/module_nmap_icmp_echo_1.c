@@ -37,10 +37,10 @@ static int nmap_icmp_echo_1_init_perthread(void *buf, macaddr_t *src, macaddr_t 
     uint16_t len = htons(20 + 8 + 120);
 	make_ip_header(ip_header, IPPROTO_ICMP, len);
 
-	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
+	struct icmp *icmp_header = (struct icmp *)((&ip_header)[1]);
 	make_icmp_header(icmp_header);
 
-    char *payload = (char *)(&icmp_header[1]);
+    char *payload = (char *)((&icmp_header)[1]);
     memset(payload, 0x00, 120);
 
 	return EXIT_SUCCESS;
@@ -53,7 +53,7 @@ static int nmap_icmp_echo_1_make_packet(void *buf, UNUSED size_t *buf_len,
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
+	struct icmp *icmp_header = (struct icmp *)((&ip_header)[1]);
 
 
     uint16_t icmp_idnum = validation[1] & 0xFFFF;
