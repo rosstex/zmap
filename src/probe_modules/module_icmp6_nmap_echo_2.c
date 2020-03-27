@@ -53,13 +53,13 @@ static int icmp6_nmap_echo_2_init_perthread(void* buf, macaddr_t *src,
 
     struct ip6_hdr *ip6_header = (struct ip6_hdr *) (&eth_header[1]);
 	// ICMPv6 header plus 8 bytes of data (validation)
-	uint16_t payload_len = sizeof(struct icmp6_hdr) + 150; // includes extra bits for validation
+	uint16_t payload_len = sizeof(struct icmp6_hdr) + 8 + 150; // includes extra bits for validation
     make_ip6_header(ip6_header, IPPROTO_ICMPV6, payload_len);
 
 	struct icmp6_hdr *icmp6_header = (struct icmp6_hdr*)(&ip6_header[1]);
 	make_icmp6_header(icmp6_header);
 
-	char *payload = (char *)(&icmp6_header[1]);
+	char *payload = (char *)(&icmp6_header[2]);
 	memset(payload, 0x00, 150);
 
 	return EXIT_SUCCESS;
@@ -74,8 +74,8 @@ static int icmp6_nmap_echo_2_make_packet(void *buf, UNUSED size_t *buf_len, UNUS
 	// uint16_t icmp_idnum = validation[2] & 0xFFFF;
 
 	// // Include validation in ICMPv6 payload data
-	// icmp6_header->icmp6_data32[1] = validation[0];
-	// icmp6_header->icmp6_data32[2] = validation[1];
+	icmp6_header->icmp6_data32[1] = validation[0];
+	icmp6_header->icmp6_data32[2] = validation[1];
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
@@ -94,7 +94,7 @@ static int icmp6_nmap_echo_2_make_packet(void *buf, UNUSED size_t *buf_len, UNUS
                 &ip6_header->ip6_src,
 		        &ip6_header->ip6_dst,
 				icmp6_header,
-				150
+				158
                 );
 
 	return EXIT_SUCCESS;
@@ -138,32 +138,11 @@ static int icmp6_validate_packet(const struct ip *ip_hdr,
     // offset iphdr by ip header length of 40 bytes to shift pointer to ICMP6 header
 	struct icmp6_hdr *icmp6_h = (struct icmp6_hdr *) (&ip6_hdr[1]);
 
-	return 1;
-
-	// ICMP validation is tricky: for some packet types, we must look inside
-	// the payload
-	if (icmp6_h->icmp6_type == ICMP6_TIME_EXCEEDED || icmp6_h->icmp6_type == ICMP6_DST_UNREACH
-        || icmp6_h->icmp6_type == ICMP6_PACKET_TOO_BIG || icmp6_h->icmp6_type == ICMP6_PARAM_PROB) {
-
-        // IP6 + ICMP6 headers + inner headers + 8 byte payload (validation)
-        if (2*sizeof(struct ip6_hdr) + 2*sizeof(struct icmp6_hdr) + 2*sizeof(uint32_t) > len) {
-			return 0;
-		}
-
-		// Use inner headers for validation
-		ip6_hdr = (struct ip6_hdr *) &icmp6_h[1];
-		icmp6_h = (struct icmp6_hdr *) &ip6_hdr[1];
-
-		// Send original src and dst IP as data in ICMPv6 payload and regenerate the validation here
-        validate_gen_ipv6(&ip6_hdr->ip6_dst, &ip6_hdr->ip6_src,
-			     (uint8_t *) validation);
-	}
 	// validate icmp id
-	if (icmp6_h->icmp6_id != (validation[2] & 0xFFFF)) {
+	if (ntohs(icmp6_h->icmp6_id) != 1000 || ntohs(icmp6_h->icmp6_seq) != 296)  {
 		return 0;
 	}
 
-	// Validate ICMPv6 data
 	if (icmp6_h->icmp6_data32[1] != validation[0] || icmp6_h->icmp6_data32[2] != validation[1]) {
 		return 0;
 	}
@@ -195,7 +174,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_icmp6_nmap_echo_2 = {
 	.name = "icmp6_nmap_echo_2",
-	.packet_length = 212, // 62, // ICMPv4: 64 bit --> Why 62? ICMPv6 also 64 bit --> Leave 64
+	.packet_length = 220, // 
 	.pcap_filter = "icmp6",
 	.pcap_snaplen = 300, // 14 ethernet header + 40 IPv6 header + 8 ICMPv6 header + 40 inner IPv6 header + 8 inner ICMPv6 header + 8 payload
 	.port_args = 1,
