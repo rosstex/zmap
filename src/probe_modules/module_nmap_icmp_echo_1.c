@@ -37,10 +37,10 @@ static int nmap_icmp_echo_1_init_perthread(void *buf, macaddr_t *src, macaddr_t 
     uint16_t len = htons(20 + 8 + 120);
 	make_ip_header(ip_header, IPPROTO_ICMP, len);
 
-	struct icmp *icmp_header = (struct icmp *)((&ip_header)[1]);
+	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 	make_icmp_header(icmp_header);
 
-    char *payload = (char *)((&icmp_header)[1]);
+    char *payload = (char *)(&icmp_header[1]);
     memset(payload, 0x00, 120);
 
 	return EXIT_SUCCESS;
@@ -53,8 +53,7 @@ static int nmap_icmp_echo_1_make_packet(void *buf, UNUSED size_t *buf_len,
 {
 	struct ether_header *eth_header = (struct ether_header *)buf;
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	struct icmp *icmp_header = (struct icmp *)((&ip_header)[1]);
-
+	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 
     uint16_t icmp_idnum = validation[1] & 0xFFFF;
 	uint16_t icmp_seqnum = validation[2] & 0xFFFF;
@@ -111,31 +110,6 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
 	uint16_t icmp_idnum = icmp_h->icmp_id;
 	uint16_t icmp_seqnum = icmp_h->icmp_seq;
-	// ICMP validation is tricky: for some packet types, we must look inside
-	// the payload
-	if (icmp_h->icmp_type == ICMP_TIMXCEED ||
-	    icmp_h->icmp_type == ICMP_UNREACH) {
-		// Should have 16B TimeExceeded/Dest_Unreachable header +
-		// original IP header + 1st 8B of original ICMP frame
-		if ((4 * ip_hdr->ip_hl + ICMP_TIMXCEED_UNREACH_HEADER_SIZE +
-		     sizeof(struct ip)) > len) {
-			return 0;
-		}
-		struct ip *ip_inner = (struct ip *)((char *)icmp_h + 8);
-		if (((uint32_t)4 * ip_hdr->ip_hl +
-		     ICMP_TIMXCEED_UNREACH_HEADER_SIZE + 4 * ip_inner->ip_hl +
-		     8 /*1st 8 bytes of original*/) > len) {
-			return 0;
-		}
-		struct icmp *icmp_inner =
-		    (struct icmp *)((char *)ip_inner + 4 * ip_hdr->ip_hl);
-		// Regenerate validation and icmp id based off inner payload
-		icmp_idnum = icmp_inner->icmp_id;
-		icmp_seqnum = icmp_inner->icmp_seq;
-		*src_ip = ip_inner->ip_dst.s_addr;
-		validate_gen(ip_hdr->ip_dst.s_addr, ip_inner->ip_dst.s_addr,
-			     (uint8_t *)validation);
-	}
 
 
 	if (icmp_idnum != (validation[1] & 0xFFFF)) { // GOOD
@@ -175,7 +149,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_nmap_icmp_echo_1 = {.name = "nmap_icmp_echo_1",
 				   .packet_length = 170,
-				   .pcap_filter = "icmp and icmp[0]!=8",
+				   .pcap_filter = "icmp",
 				   .pcap_snaplen = 300,
 				   .port_args = 1,
 				   .thread_initialize =

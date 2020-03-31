@@ -34,8 +34,8 @@ set(PROBE_MODULE_SOURCES
     probe_modules/module_nmap_udp.c
     probe_modules/module_nmap_icmp_echo_1.c
     probe_modules/module_nmap_icmp_echo_2.c
-    probe_modules/module_icmp_timestamp.c
-    probe_modules/module_icmp_reply.c
+    probe_modules/module_nmap_icmp_timestamp.c
+    probe_modules/module_nmap_icmp_reply.c
 	#probe_modules/module_tcp_cisco_backdoor.c
     probe_modules/module_udp.c
     probe_modules/packet.c

@@ -24,9 +24,9 @@
 #define ICMP_SMALLEST_SIZE 5
 #define ICMP_TIMXCEED_UNREACH_HEADER_SIZE 8
 
-probe_module_t module_icmp_timestamp;
+probe_module_t module_nmap_icmp_timestamp;
 
-static int icmp_timestamp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
+static int nmap_icmp_timestamp_init_perthread(void *buf, macaddr_t *src, macaddr_t *gw,
 				    __attribute__((unused)) port_h_t dst_port,
 				    __attribute__((unused)) void **arg_ptr)
 {
@@ -36,7 +36,7 @@ static int icmp_timestamp_init_perthread(void *buf, macaddr_t *src, macaddr_t *g
 	make_eth_header(eth_header, src, gw);
 
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
-	uint16_t len = htons(sizeof(struct ip) + sizeof(struct icmp) - 8);
+	uint16_t len = htons(40);
 	make_ip_header(ip_header, IPPROTO_ICMP, len);
 
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
@@ -45,7 +45,7 @@ static int icmp_timestamp_init_perthread(void *buf, macaddr_t *src, macaddr_t *g
 	return EXIT_SUCCESS;
 }
 
-static int icmp_timestamp_make_packet(void *buf, UNUSED size_t *buf_len,
+static int nmap_icmp_timestamp_make_packet(void *buf, UNUSED size_t *buf_len,
 				 ipaddr_n_t src_ip, ipaddr_n_t dst_ip, uint8_t ttl,
 				 uint32_t *validation, UNUSED int probe_num,
 				 UNUSED void *arg)
@@ -60,12 +60,11 @@ static int icmp_timestamp_make_packet(void *buf, UNUSED size_t *buf_len,
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
-    ip_header->ip_len = htons(40);
 
     icmp_header->icmp_type = 13;
     icmp_header->icmp_code = 0;
-	icmp_header->icmp_id = 1234;
-	icmp_header->icmp_seq = 9876;
+	icmp_header->icmp_id = icmp_idnum;
+	icmp_header->icmp_seq = icmp_seqnum;
     icmp_header->icmp_otime = htonl(12345);
     icmp_header->icmp_rtime = htonl(54321);
     icmp_header->icmp_ttime = htonl(34521);
@@ -78,7 +77,7 @@ static int icmp_timestamp_make_packet(void *buf, UNUSED size_t *buf_len,
 	return EXIT_SUCCESS;
 }
 
-static void icmp_timestamp_print_packet(FILE *fp, void *packet)
+static void nmap_icmp_timestamp_print_packet(FILE *fp, void *packet)
 {
 	struct ether_header *ethh = (struct ether_header *)packet;
 	struct ip *iph = (struct ip *)&ethh[1];
@@ -95,7 +94,7 @@ static void icmp_timestamp_print_packet(FILE *fp, void *packet)
 	fprintf(fp, "------------------------------------------------------\n");
 }
 
-static int icmp_timestamp_validate_packet(const struct ip *ip_hdr, uint32_t len,
+static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 				uint32_t *src_ip, uint32_t *validation)
 {
 	if (ip_hdr->ip_p != IPPROTO_ICMP) {
@@ -107,20 +106,30 @@ static int icmp_timestamp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	}
 	struct icmp *icmp_h =
 	    (struct icmp *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+	uint16_t icmp_idnum = icmp_h->icmp_id;
+	uint16_t icmp_seqnum = icmp_h->icmp_seq;
+    
+	if(icmp_h->icmp_type != ICMP_TSTAMPREPLY) return 0;
 
-    if(icmp_h->icmp_type != ICMP_TSTAMPREPLY) return 0;
+	if (icmp_idnum != (validation[1] & 0xFFFF)) {
+		return 0;
+	}
+	if (icmp_seqnum != (validation[2] & 0xFFFF)) {
+		return 0;
+	}
 
     return 1;
 }
 
-static void icmp_timestamp_process_packet(const u_char *packet,
+static void nmap_icmp_timestamp_process_packet(const u_char *packet,
 				     __attribute__((unused)) uint32_t len,
 				     fieldset_t *fs,
 				     __attribute__((unused))
 				     uint32_t *validation)
 {
 	struct ip *ip_hdr = (struct ip *)&packet[sizeof(struct ether_header)];
-    uint32_t packet_size = htons(ip_hdr->ip_len) + sizeof(struct ether_header); // add ethernet bytes
+	uint32_t packet_size = htons(ip_hdr->ip_len) + sizeof(struct ether_header);
+	fs_add_binary(fs, "bitstring", packet_size, (void *) packet, 0);
     fs_add_bool(fs, "success", 1);
 }
 
@@ -137,17 +146,17 @@ static fielddef_t fields[] = {
      .type = "bool",
      .desc = "did probe module classify response as success"}};
 
-probe_module_t module_icmp_timestamp = {.name = "icmp_timestamp",
+probe_module_t module_nmap_icmp_timestamp = {.name = "nmap_icmp_timestamp",
 				   .packet_length = 54,
 				   .pcap_filter = "icmp",
 				   .pcap_snaplen = 96,
 				   .port_args = 0,
 				   .thread_initialize =
-				       &icmp_timestamp_init_perthread,
-				   .make_packet = &icmp_timestamp_make_packet,
-				   .print_packet = &icmp_timestamp_print_packet,
-				   .process_packet = &icmp_timestamp_process_packet,
-				   .validate_packet = &icmp_timestamp_validate_packet,
+				       &nmap_icmp_timestamp_init_perthread,
+				   .make_packet = &nmap_icmp_timestamp_make_packet,
+				   .print_packet = &nmap_icmp_timestamp_print_packet,
+				   .process_packet = &nmap_icmp_timestamp_process_packet,
+				   .validate_packet = &icmp_validate_packet,
 				   .close = NULL,
 				   .output_type = OUTPUT_TYPE_STATIC,
 				   .fields = fields,

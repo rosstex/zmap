@@ -154,7 +154,6 @@ static void icmp6_nmap_echo_1_process_packet(const u_char *packet,
 {
 	struct ip6_hdr *ip6_hdr = (struct ip6_hdr *) &packet[sizeof(struct ether_header)];
 	uint32_t packet_size = ntohs(ip6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen) + sizeof(struct ether_header);
-
 	fs_add_binary(fs, "bitstring", packet_size, (void *) packet, 0);
     fs_add_bool(fs, "success", 1);
 }

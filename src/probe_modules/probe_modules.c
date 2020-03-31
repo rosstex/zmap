@@ -31,9 +31,9 @@ extern probe_module_t module_upnp;
 extern probe_module_t module_dns;
 extern probe_module_t module_bacnet;
 extern probe_module_t module_tcp_synopt;
-extern probe_module_t module_icmp_timestamp;
-extern probe_module_t module_icmp_reply;
 // CUSTOM IPv4 PROBES
+extern probe_module_t module_nmap_icmp_timestamp;
+extern probe_module_t module_nmap_icmp_reply;
 extern probe_module_t module_nmap_tcp;
 extern probe_module_t module_nmap_udp;
 extern probe_module_t module_nmap_icmp_echo_1;
@@ -73,7 +73,7 @@ probe_module_t* probe_modules[] = {
 
     &module_nmap_tcp, &module_nmap_udp, &module_nmap_icmp_echo_1,
     &module_nmap_icmp_echo_2,
-    &module_icmp_timestamp, &module_icmp_reply,
+    &module_nmap_icmp_timestamp, &module_nmap_icmp_reply,
 	
 	&module_icmp6_nmap_echo_1,
 	&module_icmp6_nmap_echo_2,
