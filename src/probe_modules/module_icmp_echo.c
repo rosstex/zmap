@@ -166,7 +166,7 @@ static fielddef_t fields[] = {
      .type = "bool",
      .desc = "did probe module classify response as success"}};
 
-probe_module_t module_icmp_echo = {.name = "icmp_echoscan",
+probe_module_t module_icmp_echo = {.name = "icmp_echo",
 				   .packet_length = 62,
 				   .pcap_filter = "icmp and icmp[0]!=8",
 				   .pcap_snaplen = 96,
