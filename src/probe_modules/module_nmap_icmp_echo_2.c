@@ -173,7 +173,7 @@ static fielddef_t fields[] = {
      .desc = "did probe module classify response as success"}};
 
 probe_module_t module_nmap_icmp_echo_2 = {.name = "nmap_icmp_echo_2",
-				   .packet_length = 200,
+				   .packet_length = 192,
 				   .pcap_filter = "icmp and icmp[0]!=8",
 				   .pcap_snaplen = 300,
 				   .port_args = 1,
