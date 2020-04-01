@@ -19,6 +19,7 @@
 #include "../fieldset.h"
 #include "probe_modules.h"
 #include "packet.h"
+#include "module_udp.h"
 
 #define ICMP_UNREACH_HEADER_SIZE 8
 
@@ -92,24 +93,28 @@ static int nmap_udp_validate_packet(const struct ip *ip_hdr, UNUSED uint32_t len
 				   __attribute__((unused)) uint32_t *src_ip,
 				   uint32_t *validation)
 {
-	if (ip_hdr->ip_p == IPPROTO_UDP) {
-		if ((4 * ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
-			// buffer not large enough to contain expected udp
-			// header
-			return PACKET_INVALID;
-		}
-		struct udphdr *udp =
-		    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
-		uint16_t sport = ntohs(udp->uh_dport);
-		if (!check_dst_port(sport, num_ports, validation)) {
-			return PACKET_INVALID;
-		}
-		// if (!blacklist_is_allowed(*src_ip)) {
-		// 	return PACKET_INVALID;
-		// }
-	} else {
-		return PACKET_INVALID;
+	if (!udp_do_validate_packet(ip_hdr, len, NULL, validation, num_ports)) {
+		return 0;
 	}
+	return 1;
+	// if (ip_hdr->ip_p == IPPROTO_UDP) {
+	// 	if ((4 * ip_hdr->ip_hl + sizeof(struct udphdr)) > len) {
+	// 		// buffer not large enough to contain expected udp
+	// 		// header
+	// 		return PACKET_INVALID;
+	// 	}
+	// 	struct udphdr *udp =
+	// 	    (struct udphdr *)((char *)ip_hdr + 4 * ip_hdr->ip_hl);
+	// 	uint16_t sport = ntohs(udp->uh_dport);
+	// 	if (!check_dst_port(sport, num_ports, validation)) {
+	// 		return PACKET_INVALID;
+	// 	}
+	// 	// if (!blacklist_is_allowed(*src_ip)) {
+	// 	// 	return PACKET_INVALID;
+	// 	// }
+	// } else {
+	// 	return PACKET_INVALID;
+	// }
 
 	return PACKET_VALID;
 }

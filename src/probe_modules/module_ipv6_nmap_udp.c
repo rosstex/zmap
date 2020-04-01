@@ -112,10 +112,6 @@ int ipv6_nmap_udp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 {
 	struct ip6_hdr *ipv6_hdr = (struct ip6_hdr *) ip_hdr;
 
-	if (ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_nxt != IPPROTO_UDP) {
-		return 0;
-	}
-
 	if ((ntohs(ipv6_hdr->ip6_ctlun.ip6_un1.ip6_un1_plen)) > len) {
 		// buffer not large enough to contain expected UDP header, i.e. IPv6 payload
 		return 0;
