@@ -123,7 +123,8 @@ int ipv6_nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n
     }
 
 	memcpy(tcp_options, tcp_opts, 20);
-
+	
+	tcp_header->th_sum = 0;
 	tcp_header->th_sum = tcp6_checksum(2*sizeof(struct tcphdr),
 			&ip6_header->ip6_src, &ip6_header->ip6_dst, tcp_header);
 
@@ -166,9 +167,9 @@ int ipv6_nmap_tcp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		return 0;
 	}
 	// validate destination port
-	if (!check_dst_port(ntohs(dport), num_ports, validation)) {
-		return 0;
-	}
+	// if (!check_dst_port(ntohs(dport), num_ports, validation)) {
+	// 	return 0;
+	// }
 	// validate tcp acknowledgement number
 	if (ntohl(tcp_hdr->th_ack) != validation[0]+1) {
 		return 0;

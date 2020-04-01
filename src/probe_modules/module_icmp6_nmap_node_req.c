@@ -93,7 +93,7 @@ static int icmp6_nmap_node_req_make_packet(void *buf, UNUSED size_t *buf_len, UN
                 &ip6_header->ip6_src,
 		        &ip6_header->ip6_dst,
 				icmp6_header,
-				16+8+8
+				16+8
                 );
 
 	return EXIT_SUCCESS;
