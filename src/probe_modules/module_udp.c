@@ -455,9 +455,9 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		if (!check_dst_port(sport, num_ports, validation)) {
 			return PACKET_INVALID;
 		}
-		if (!blacklist_is_allowed(*src_ip)) {
-			return PACKET_INVALID;
-		}
+		// if (!blacklist_is_allowed(*src_ip)) {
+		// 	return PACKET_INVALID;
+		// }
 	} else if (ip_hdr->ip_p == IPPROTO_ICMP) {
 		// UDP can return ICMP Destination unreach
 		// IP( ICMP( IP( UDP ) ) ) for a destination unreach
@@ -483,9 +483,9 @@ int udp_do_validate_packet(const struct ip *ip_hdr, uint32_t len,
 		// find original destination IP and check that we sent a packet
 		// to that IP address
 		uint32_t dest = ip_inner->ip_dst.s_addr;
-		if (!blacklist_is_allowed(dest)) {
-			return PACKET_INVALID;
-		}
+		// if (!blacklist_is_allowed(dest)) {
+		// 	return PACKET_INVALID;
+		// }
 		// This is the UDP packet we sent
 		struct udphdr *udp =
 		    (struct udphdr *)((char *)ip_inner + 4 * ip_inner->ip_hl);
