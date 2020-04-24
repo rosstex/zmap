@@ -90,7 +90,6 @@ int ipv6_nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n
 	struct ip6_hdr *ip6_header = (struct ip6_hdr*) (&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr*) (&ip6_header[1]);
 	void *tcp_options = (void *)(&tcp_header[1]);
-	uint32_t tcp_seq = validation[0];
 	uint8_t *tcp_opts;
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
@@ -99,7 +98,7 @@ int ipv6_nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len, UNUSED ipaddr_n
 
 	tcp_header->th_sport = htons(get_src_port(num_ports,
 				probe_num, validation));
-	tcp_header->th_seq = htonl(tcp_seq);
+	tcp_header->th_seq = htonl(100);
 	tcp_header->th_off = 10;
 
 	if(strcmp(packet_type, "t5") == 0)
@@ -203,7 +202,7 @@ probe_module_t module_ipv6_nmap_tcp = {
 	.name = "ipv6_nmap_tcp",
 	.packet_length = 94, // 14 Ethernet + 40 IPv6 + 20 TCP + 20 Options
 	.pcap_filter = "ip6 proto 6",
-	.pcap_snaplen = 116, // was 96 for IPv4
+	.pcap_snaplen = 94, // was 96 for IPv4
 	.port_args = 1,
 	.global_initialize = &ipv6_nmap_tcp_global_initialize,
 	.thread_initialize = &ipv6_nmap_tcp_init_perthread,

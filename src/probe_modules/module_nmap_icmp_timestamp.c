@@ -54,12 +54,14 @@ static int nmap_icmp_timestamp_make_packet(void *buf, UNUSED size_t *buf_len,
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 
-	uint16_t icmp_idnum = validation[1] & 0xFFFF;
-	uint16_t icmp_seqnum = validation[2] & 0xFFFF;
+	uint16_t icmp_idnum = htons(999);
+	uint16_t icmp_seqnum = htons(295);
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
+
+	ip_header->ip_id = htons(100);
 
     icmp_header->icmp_type = 13;
     icmp_header->icmp_code = 0;

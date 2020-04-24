@@ -71,8 +71,8 @@ static int icmp6_nmap_node_req_make_packet(void *buf, UNUSED size_t *buf_len, UN
 	uint16_t icmp_idnum = validation[2] & 0xFFFF;
 
 	// // Include validation in ICMPv6 payload data
-	icmp6_header->icmp6_data32[1] = validation[0];
-	icmp6_header->icmp6_data32[2] = validation[1];
+	icmp6_header->icmp6_data32[1] = 0;
+	icmp6_header->icmp6_data32[2] = 1;
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
@@ -81,8 +81,8 @@ static int icmp6_nmap_node_req_make_packet(void *buf, UNUSED size_t *buf_len, UN
 	icmp6_header->icmp6_type = 139;
 	icmp6_header->icmp6_code = 0;
 
-	icmp6_header->icmp6_data16[0] = htons(4);
-	icmp6_header->icmp6_data16[1] = htons(2);
+	icmp6_header->icmp6_data16[0] = htons(3);
+	icmp6_header->icmp6_data16[1] = htons(0);
 
 	struct in6_addr* data = &icmp6_header[2];
 	*data = ip6_header->ip6_dst;

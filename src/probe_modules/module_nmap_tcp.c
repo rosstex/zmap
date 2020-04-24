@@ -96,16 +96,17 @@ static int nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len,
 	struct ip *ip_header = (struct ip *)(&eth_header[1]);
 	struct tcphdr *tcp_header = (struct tcphdr *)(&ip_header[1]);
     void *tcp_options = (void *)(&tcp_header[1]);
-	uint32_t tcp_seq = validation[0];
     uint8_t *tcp_opts;
 
     ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
 
+    ip_header->ip_id = htons(100);
+
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
-	tcp_header->th_seq = 100;
+	tcp_header->th_seq = htonl(100);
 	tcp_header->th_sum = 0;
     tcp_header->th_off = 10;
 
@@ -133,7 +134,7 @@ static int nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len,
     memcpy(tcp_options, tcp_opts, 20);
 
 	tcp_header->th_sum =
-	    tcp_checksum(sizeof(struct tcphdr) + sizeof(uint8_t) * 20, ip_header->ip_src.s_addr,
+	    tcp_checksum(20, ip_header->ip_src.s_addr,
 			 ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;

@@ -56,8 +56,10 @@ static int nmap_icmp_echo_2_make_packet(void *buf, UNUSED size_t *buf_len,
 	struct icmp *icmp_header = (struct icmp *)(&ip_header[1]);
 
 
-    uint16_t icmp_idnum = validation[1] & 0xFFFF;
-	uint16_t icmp_seqnum = validation[2] & 0xFFFF;
+    uint16_t icmp_idnum = htons(1000);
+	uint16_t icmp_seqnum = htons(296);
+
+	ip_header->ip_id = htons(100);
 
 	ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
