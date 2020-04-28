@@ -10,9 +10,9 @@ static pthread_mutex_t **mutexes = NULL;
 
 static pthread_mutex_t *get_mutex(int fd)
 {
-	assert(fd < 3 && "todo: implement generically");
+	// assert(fd < 3 && "todo: implement generically");
 	if (!mutexes) {
-		mutexes = xmalloc(3 * sizeof(char *));
+		mutexes = xmalloc(100 * sizeof(char *));
 		assert(mutexes);
 	}
 	if (!mutexes[fd]) {

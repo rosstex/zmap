@@ -97,6 +97,50 @@ __attribute__((unused)) static inline uint16_t icmp6_checksum(
 	return (unsigned short) (~sum);
 }
 
+__attribute__((unused)) static inline uint16_t udp_checksum(
+        struct in6_addr *saddr,
+		struct in6_addr *daddr,
+		struct udphdr *udp_header)
+{
+	unsigned long sum = 0;
+	uint16_t *src_addr = (uint16_t *) saddr;
+	uint16_t *dest_addr = (uint16_t *) daddr;
+
+	// Reset checksum value for calculation
+	udp_header->uh_sum = 0;
+
+	// Pseudo header for IPv6+UDP
+	for (int i = 0; i < 2; i++) {
+		sum += ntohs(src_addr[i]);
+	}
+	for (int i = 0; i < 2; i++) {
+		sum += ntohs(dest_addr[i]);
+	}
+	sum += ntohs(udp_header->uh_ulen);
+	sum += IPPROTO_UDP;
+
+	unsigned short *w = (unsigned short *) udp_header;
+	int bytes_left = ntohs(udp_header->uh_ulen);
+
+	// Add checksum of UDP header and data
+	while (bytes_left > 1) {
+		sum += ntohs(*w++);
+		bytes_left -= 2;
+	}
+
+	// If 1 byte is left, we add a padding byte (0xFF) to build a 16bit word
+	if (bytes_left > 0) {
+		sum += *w & ntohs(0xFF00);
+	}
+
+	// Account for carries
+	sum = (sum >> 16) + (sum & 0xFFFF);
+	sum += (sum >> 16);
+
+	// Take the one's complement of sum
+	return htons((unsigned short) (~sum));
+}
+
 __attribute__((unused)) static inline uint16_t ipv6_udp_checksum(
         struct in6_addr *saddr,
 		struct in6_addr *daddr,

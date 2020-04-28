@@ -36,6 +36,12 @@
 #include "validate.h"
 #include "ipv6_target_file.h"
 
+ #include <sys/file.h>
+ #define   LOCK_SH   1    /* shared lock */
+ #define   LOCK_EX   2    /* exclusive lock */
+ #define   LOCK_NB   4    /* don't block when locking */
+ #define   LOCK_UN   8    /* unlock */
+
 // OS specific functions called by send_run
 static inline int send_packet(sock_t sock, void *buf, int len, uint32_t idx);
 static inline int send_run_init(sock_t sock);
@@ -64,6 +70,8 @@ static uint16_t num_src_ports;
 // IPv6
 static int ipv6 = 0;
 static struct in6_addr ipv6_src;
+
+FILE *probe_output;
 
 
 void sig_handler_increase_speed(UNUSED int signal)
@@ -237,6 +245,16 @@ int send_run(sock_t st, shard_t *s)
 	// Allocate a buffer to hold the outgoing packet
 	char buf[MAX_PACKET_SIZE];
 	memset(buf, 0, MAX_PACKET_SIZE);
+
+	char probe_output_name[50];
+	strcpy(probe_output_name, zconf.probe_module->name);
+	strcat(probe_output_name, "_probes.csv");
+
+	fprintf(stdout, "%s\n", probe_output_name);
+
+	remove(probe_output_name);
+	probe_output = fopen(probe_output_name, "a");
+	// perror("Error");
 
 	// OS specific per-thread init
 	if (send_run_init(st)) {
@@ -414,48 +432,54 @@ int send_run(sock_t st, shard_t *s)
 				    "send thread %hhu set length (%zu) larger than MAX (%zu)",
 				    s->thread_id, length, MAX_PACKET_SIZE);
 			}
-			if (zconf.dryrun) {
-				lock_file(stdout);
-				zconf.probe_module->print_packet(stdout, buf);
-				unlock_file(stdout);
-			} else {
-				void *contents =
-				    buf + zconf.send_ip_pkts *
-					      sizeof(struct ether_header);
-				length -= (zconf.send_ip_pkts *
-					   sizeof(struct ether_header));
-				int any_sends_successful = 0;
-				for (int i = 0; i < attempts; ++i) {
-					int rc = send_packet(st, contents,
-							     length, idx);
-					if (rc < 0) {
-						// IPv6
-						if (ipv6) {
-							char ipv6_str[100];
-							inet_ntop(AF_INET6, &ipv6_dst, ipv6_str, 100-1);
-							log_debug("send", "send_packet failed for %s. %s",
-									  ipv6_str, strerror(errno));
-						} else {
-							struct in_addr addr;
-							addr.s_addr = current_ip;
-							char addr_str_buf[INET_ADDRSTRLEN];
-							const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
-							if (addr_str != NULL) {
-								log_debug("send", "send_packet failed for %s. %s",
-									addr_str, strerror(errno));
-							}
-						}
+			// if (zconf.dryrun) {
+			lock_file(probe_output);
+			// int lock = flock(probe_output, LOCK_SH);
+			fwrite(&buf, 1, length, probe_output);
+			fprintf(probe_output, "\n");
+			// zconf.probe_module->print_packet(probe_output, buf);
+			unlock_file(probe_output);
+			// int release = flock(probe_output, LOCK_UN);
+
+			// }
+			// else {
+			void *contents =
+				buf + zconf.send_ip_pkts *
+						sizeof(struct ether_header);
+			length -= (zconf.send_ip_pkts *
+					sizeof(struct ether_header));
+			int any_sends_successful = 0;
+			for (int i = 0; i < attempts; ++i) {
+				int rc = send_packet(st, contents,
+								length, idx);
+				if (rc < 0) {
+					// IPv6
+					if (ipv6) {
+						char ipv6_str[100];
+						inet_ntop(AF_INET6, &ipv6_dst, ipv6_str, 100-1);
+						log_debug("send", "send_packet failed for %s. %s",
+									ipv6_str, strerror(errno));
 					} else {
-						any_sends_successful = 1;
-						break;
+						struct in_addr addr;
+						addr.s_addr = current_ip;
+						char addr_str_buf[INET_ADDRSTRLEN];
+						const char *addr_str = inet_ntop(AF_INET, &addr, addr_str_buf, INET_ADDRSTRLEN);
+						if (addr_str != NULL) {
+							log_debug("send", "send_packet failed for %s. %s",
+								addr_str, strerror(errno));
+						}
 					}
+				} else {
+					any_sends_successful = 1;
+					break;
 				}
-				if (!any_sends_successful) {
-					s->state.failures++;
-				}
-				idx++;
-				idx &= 0xFF;
 			}
+			if (!any_sends_successful) {
+				s->state.failures++;
+			}
+			idx++;
+			idx &= 0xFF;
+			// }
 		}
 
 		// Track the number of hosts we actually scanned.
@@ -492,11 +516,13 @@ int send_run(sock_t st, shard_t *s)
 	}
 cleanup:
 	s->cb(s->thread_id, s->arg);
-	if (zconf.dryrun) {
-		lock_file(stdout);
-		fflush(stdout);
-		unlock_file(stdout);
-	}
+	// if (zconf.dryrun) {
+	lock_file(probe_output);
+	// int lock = flock(probe_output, LOCK_SH);
+	fflush(probe_output);
+	unlock_file(probe_output);
+	// int release = flock(probe_output, LOCK_UN);
+	// }
 	log_debug("send", "thread %hu cleanly finished", s->thread_id);
 	return EXIT_SUCCESS;
 }
