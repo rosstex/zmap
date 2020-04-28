@@ -435,7 +435,10 @@ int send_run(sock_t st, shard_t *s)
 			// if (zconf.dryrun) {
 			lock_file(probe_output);
 			// int lock = flock(probe_output, LOCK_SH);
-			fwrite(&buf, 1, length, probe_output);
+			for (int i = 0; i < length; i++) {
+				fprintf(probe_output, "%02x", buf[i]);
+			}
+			// fwrite(&buf, 1, length, probe_output);
 			fprintf(probe_output, "\n");
 			// zconf.probe_module->print_packet(probe_output, buf);
 			unlock_file(probe_output);
