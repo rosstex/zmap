@@ -139,10 +139,10 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	}
 
 
-	if (icmp_idnum != (validation[1] & 0xFFFF)) { // GOOD
+	if (ntohs(icmp_idnum) != 1000) { // GOOD
 		return 0;
 	}
-	if (icmp_seqnum != (validation[2] & 0xFFFF)) {
+	if (ntohs(icmp_seqnum) != 296) {
 		return 0;
 	}
 	return 1;

@@ -68,7 +68,7 @@ static int nmap_icmp_reply_make_packet(void *buf, UNUSED size_t *buf_len,
     icmp_header->icmp_code = 0;
 	icmp_header->icmp_id = icmp_idnum;
 	icmp_header->icmp_seq = icmp_seqnum;
-    *pload = htonl(3345);
+    *pload = 0x3445;
 
 	icmp_header->icmp_cksum = 0;
 	ip_header->ip_sum = 0;
@@ -113,10 +113,10 @@ static int icmp_validate_packet(const struct ip *ip_hdr, uint32_t len,
 	uint16_t icmp_seqnum = icmp_h->icmp_seq;
 	
 	// validate icmp id and seqnum
-	if (icmp_idnum != (validation[1] & 0xFFFF)) {
+	if (ntohs(icmp_idnum) != 999) { // GOOD
 		return 0;
 	}
-	if (icmp_seqnum != (validation[2] & 0xFFFF)) {
+	if (ntohs(icmp_seqnum) != 295) {
 		return 0;
 	}
 	return 1;
