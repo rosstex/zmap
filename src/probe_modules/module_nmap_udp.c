@@ -82,8 +82,9 @@ static int nmap_udp_make_packet(void *buf, UNUSED size_t *buf_len,
     ip_header->ip_src.s_addr = src_ip;
 	ip_header->ip_dst.s_addr = dst_ip;
 	ip_header->ip_ttl = ttl;
+
 	udp_header->uh_sport = htons(get_src_port(num_ports, probe_num, validation));
-	udp_header->check = htons(100);
+	udp_header->check = 0;
 
 	ip_header->ip_sum = 0;
 	ip_header->ip_sum = zmap_ip_checksum((unsigned short *)ip_header);

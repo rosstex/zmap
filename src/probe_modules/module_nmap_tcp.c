@@ -107,7 +107,9 @@ static int nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len,
 	tcp_header->th_sport =
 	    htons(get_src_port(num_ports, probe_num, validation));
 	tcp_header->th_seq = htonl(100);
+
 	tcp_header->th_sum = 0;
+    
     tcp_header->th_off = 10;
 
     if(strcmp(packet_type, "t5") == 0)
@@ -132,9 +134,10 @@ static int nmap_tcp_make_packet(void *buf, UNUSED size_t *buf_len,
 
     // set tcp options
     memcpy(tcp_options, tcp_opts, 20);
-
+    
+    tcp_header->th_sum = 0;
 	tcp_header->th_sum =
-	    tcp_checksum(20, ip_header->ip_src.s_addr,
+	    tcp_checksum(40, ip_header->ip_src.s_addr,
 			 ip_header->ip_dst.s_addr, tcp_header);
 
 	ip_header->ip_sum = 0;
