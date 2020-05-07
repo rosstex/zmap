@@ -53,14 +53,11 @@ static int icmp6_nmap_echo_2_init_perthread(void* buf, macaddr_t *src,
 
     struct ip6_hdr *ip6_header = (struct ip6_hdr *) (&eth_header[1]);
 	// ICMPv6 header plus 8 bytes of data (validation)
-	uint16_t payload_len = sizeof(struct icmp6_hdr) + 8 + 150; // includes extra bits for validation
-    make_ip6_header(ip6_header, IPPROTO_ICMPV6, payload_len);
+	uint16_t payload_len = sizeof(struct icmp6_hdr) + 32; // includes extra bits for validation
+    make_ip6_header(ip6_header, 0, payload_len);
 
-	struct icmp6_hdr *icmp6_header = (struct icmp6_hdr*)(&ip6_header[1]);
+	struct icmp6_hdr *icmp6_header = (struct icmp6_hdr*)(((uint32_t*) &ip6_header[1]) + 8);
 	make_icmp6_header(icmp6_header);
-
-	char *payload = (char *)(&icmp6_header[2]);
-	memset(payload, 0x00, 150);
 
 	return EXIT_SUCCESS;
 }
@@ -69,13 +66,19 @@ static int icmp6_nmap_echo_2_make_packet(void *buf, UNUSED size_t *buf_len, UNUS
 {
 	struct ether_header *eth_header = (struct ether_header *) buf;
 	struct ip6_hdr *ip6_header = (struct ip6_hdr *)(&eth_header[1]);
-	struct icmp6_hdr *icmp6_header = (struct icmp6_hdr*)(&ip6_header[1]);
+	struct icmp6_hdr *icmp6_header = (struct icmp6_hdr*)(((uint32_t*) &ip6_header[1]) + 8);;
 	
 	// uint16_t icmp_idnum = validation[2] & 0xFFFF;
+	uint8_t *hop_header = (uint8_t *) (&ip6_header[1]);
+
+	*hop_header = 60;
+	*(hop_header + 8) = 43;
+	*(hop_header + 16) = 60;
+	*(hop_header + 24) = 58;
 
 	// // Include validation in ICMPv6 payload data
-	icmp6_header->icmp6_data32[1] = validation[0];
-	icmp6_header->icmp6_data32[2] = validation[1];
+	// icmp6_header->icmp6_data32[1] = validation[0];
+	// icmp6_header->icmp6_data32[2] = validation[1];
 
 	ip6_header->ip6_src = ((struct in6_addr *) arg)[0];
 	ip6_header->ip6_dst = ((struct in6_addr *) arg)[1];
@@ -84,7 +87,7 @@ static int icmp6_nmap_echo_2_make_packet(void *buf, UNUSED size_t *buf_len, UNUS
 	// icmp6_header->icmp6_id= icmp_idnum;
 
 
-	icmp6_header->icmp6_id = htons(1000);
+	icmp6_header->icmp6_id = htons(0xabcd);
 	icmp6_header->icmp6_seq = htons(296);
 
 	// TODO: add sensible TOS value
@@ -94,7 +97,7 @@ static int icmp6_nmap_echo_2_make_packet(void *buf, UNUSED size_t *buf_len, UNUS
                 &ip6_header->ip6_src,
 		        &ip6_header->ip6_dst,
 				icmp6_header,
-				158
+				0
                 );
 
 	return EXIT_SUCCESS;
@@ -143,9 +146,9 @@ static int icmp6_validate_packet(const struct ip *ip_hdr,
 		return 0;
 	}
 
-	if (icmp6_h->icmp6_data32[1] != validation[0] || icmp6_h->icmp6_data32[2] != validation[1]) {
-		return 0;
-	}
+	// if (icmp6_h->icmp6_data32[1] != validation[0] || icmp6_h->icmp6_data32[2] != validation[1]) {
+	// 	return 0;
+	// }
 
 	return 1;
 }
@@ -174,7 +177,7 @@ static fielddef_t fields[] = {
 
 probe_module_t module_icmp6_nmap_echo_2 = {
 	.name = "icmp6_nmap_echo_2",
-	.packet_length = 220, // 
+	.packet_length = 102, // 
 	.pcap_filter = "icmp6",
 	.pcap_snaplen = 300, // 14 ethernet header + 40 IPv6 header + 8 ICMPv6 header + 40 inner IPv6 header + 8 inner ICMPv6 header + 8 payload
 	.port_args = 1,
